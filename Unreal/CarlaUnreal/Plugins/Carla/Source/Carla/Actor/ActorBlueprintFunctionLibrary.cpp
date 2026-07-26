@@ -381,6 +381,46 @@ void UActorBlueprintFunctionLibrary::MakeCameraDefinition(
   LensYSize.RecommendedValues = { TEXT("0.08") };
   LensYSize.bRestrictToRecommended = false;
 
+  FActorVariation FThetaEnabled;
+  FThetaEnabled.Id = TEXT("ftheta_enabled");
+  FThetaEnabled.Type = EActorAttributeType::Bool;
+  FThetaEnabled.RecommendedValues = { TEXT("false") };
+  FThetaEnabled.bRestrictToRecommended = false;
+
+  auto MakeFThetaFloat = [](const TCHAR *Id, const TCHAR *Default)
+  {
+    FActorVariation Variation;
+    Variation.Id = Id;
+    Variation.Type = EActorAttributeType::Float;
+    Variation.RecommendedValues = { Default };
+    Variation.bRestrictToRecommended = false;
+    return Variation;
+  };
+  const auto FThetaImageWidth =
+      MakeFThetaFloat(TEXT("ftheta_image_width"), TEXT("800.0"));
+  const auto FThetaImageHeight =
+      MakeFThetaFloat(TEXT("ftheta_image_height"), TEXT("600.0"));
+  const auto FThetaPrincipalPointX =
+      MakeFThetaFloat(TEXT("ftheta_principal_point_x"), TEXT("400.0"));
+  const auto FThetaPrincipalPointY =
+      MakeFThetaFloat(TEXT("ftheta_principal_point_y"), TEXT("300.0"));
+  const auto FThetaMaxAngle =
+      MakeFThetaFloat(TEXT("ftheta_max_angle"), TEXT("1.5707963268"));
+  const auto FThetaSourceFocalLength =
+      MakeFThetaFloat(TEXT("ftheta_source_focal_length"), TEXT("400.0"));
+  const auto FThetaBackward0 =
+      MakeFThetaFloat(TEXT("ftheta_pixeldist_to_angle_0"), TEXT("0.0"));
+  const auto FThetaBackward1 =
+      MakeFThetaFloat(TEXT("ftheta_pixeldist_to_angle_1"), TEXT("0.0"));
+  const auto FThetaBackward2 =
+      MakeFThetaFloat(TEXT("ftheta_pixeldist_to_angle_2"), TEXT("0.0"));
+  const auto FThetaBackward3 =
+      MakeFThetaFloat(TEXT("ftheta_pixeldist_to_angle_3"), TEXT("0.0"));
+  const auto FThetaBackward4 =
+      MakeFThetaFloat(TEXT("ftheta_pixeldist_to_angle_4"), TEXT("0.0"));
+  const auto FThetaBackward5 =
+      MakeFThetaFloat(TEXT("ftheta_pixeldist_to_angle_5"), TEXT("0.0"));
+
   Definition.Variations.Append({
       ResX,
       ResY,
@@ -390,7 +430,20 @@ void UActorBlueprintFunctionLibrary::MakeCameraDefinition(
       LensK,
       LensKcube,
       LensXSize,
-      LensYSize});
+      LensYSize,
+      FThetaEnabled,
+      FThetaImageWidth,
+      FThetaImageHeight,
+      FThetaPrincipalPointX,
+      FThetaPrincipalPointY,
+      FThetaMaxAngle,
+      FThetaSourceFocalLength,
+      FThetaBackward0,
+      FThetaBackward1,
+      FThetaBackward2,
+      FThetaBackward3,
+      FThetaBackward4,
+      FThetaBackward5});
 
   if (bEnableModifyingPostProcessEffects)
   {

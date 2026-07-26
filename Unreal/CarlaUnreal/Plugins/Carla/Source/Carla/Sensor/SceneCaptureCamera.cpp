@@ -29,6 +29,73 @@ ASceneCaptureCamera::ASceneCaptureCamera(const FObjectInitializer& ObjectInitial
         TEXT("Material'/Carla/PostProcessingMaterials/PhysicLensDistortion.PhysicLensDistortion'"));
 }
 
+void ASceneCaptureCamera::Set(const FActorDescription &Description)
+{
+  Super::Set(Description);
+  const bool bEnableFTheta =
+      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToBool(
+          "ftheta_enabled", Description.Variations, false);
+  if (!bEnableFTheta)
+  {
+    return;
+  }
+  if (!ReplacePostProcessingMaterial(
+          0u,
+          TEXT("Material'/Carla/PostProcessingMaterials/NvidiaFThetaDistortion.NvidiaFThetaDistortion'")))
+  {
+    UE_LOG(LogCarla, Error, TEXT(
+        "NVIDIA F-theta material is missing; ftheta_enabled cannot be used"));
+    return;
+  }
+
+  constexpr uint8 FThetaShaderIndex = 0u;
+  SetFloatShaderParameter(
+      FThetaShaderIndex,
+      TEXT("FThetaEnabled"),
+      1.0f);
+  SetFloatShaderParameter(
+      FThetaShaderIndex,
+      TEXT("FThetaImageWidth"),
+      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+          "ftheta_image_width", Description.Variations, 800.0f));
+  SetFloatShaderParameter(
+      FThetaShaderIndex,
+      TEXT("FThetaImageHeight"),
+      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+          "ftheta_image_height", Description.Variations, 600.0f));
+  SetFloatShaderParameter(
+      FThetaShaderIndex,
+      TEXT("FThetaPrincipalPointX"),
+      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+          "ftheta_principal_point_x", Description.Variations, 400.0f));
+  SetFloatShaderParameter(
+      FThetaShaderIndex,
+      TEXT("FThetaPrincipalPointY"),
+      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+          "ftheta_principal_point_y", Description.Variations, 300.0f));
+  SetFloatShaderParameter(
+      FThetaShaderIndex,
+      TEXT("FThetaMaxAngle"),
+      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+          "ftheta_max_angle", Description.Variations, 1.5707963268f));
+  SetFloatShaderParameter(
+      FThetaShaderIndex,
+      TEXT("FThetaSourceFocalLength"),
+      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+          "ftheta_source_focal_length", Description.Variations, 400.0f));
+  for (uint8 Index = 0u; Index < 6u; ++Index)
+  {
+    const FString AttributeName = FString::Printf(
+        TEXT("ftheta_pixeldist_to_angle_%u"), Index);
+    const FName ParameterName(*FString::Printf(TEXT("FThetaBackward%u"), Index));
+    SetFloatShaderParameter(
+        FThetaShaderIndex,
+        ParameterName,
+        UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+            *AttributeName, Description.Variations, 0.0f));
+  }
+}
+
 void ASceneCaptureCamera::BeginPlay()
 {
   Super::BeginPlay();

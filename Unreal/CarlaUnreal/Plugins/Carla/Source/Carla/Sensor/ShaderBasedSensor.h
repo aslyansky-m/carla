@@ -106,6 +106,10 @@ public:
   // bool LoadPostProcessingMaterial(const FString &Path, float Weight = 1.0f);
   bool AddPostProcessingMaterial(const FString &Path);
 
+  /// Replace a material previously added with AddPostProcessingMaterial.
+  /// This must be called before BeginPlay.
+  bool ReplacePostProcessingMaterial(uint8_t ShaderIndex, const FString &Path);
+
   /// Add a post-processing shader.
   UFUNCTION(BlueprintCallable)
   void AddShader(const FSensorShader &Shader)

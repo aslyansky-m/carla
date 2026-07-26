@@ -28,6 +28,8 @@ public:
 
   ASceneCaptureCamera(const FObjectInitializer &ObjectInitializer);
 
+  void Set(const FActorDescription &ActorDescription) override;
+
 protected:
 	
 #ifdef CARLA_HAS_GBUFFER_API
@@ -41,5 +43,4 @@ protected:
   virtual void OnFirstClientConnected() override;
   virtual void OnLastClientDisconnected() override;
 
-private:
 };
