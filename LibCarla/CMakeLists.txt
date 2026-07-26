@@ -96,6 +96,7 @@ if (BUILD_CARLA_SERVER)
     LIBCARLA_SERVER_SOURCES
     ${LIBCARLA_SOURCE_PATH}/carla/Buffer.cpp
     ${LIBCARLA_SOURCE_PATH}/carla/Exception.cpp
+    ${LIBCARLA_SOURCE_PATH}/carla/Isoc23Compat.cpp
     ${LIBCARLA_SOURCE_PATH}/carla/geom/*.cpp
     ${LIBCARLA_SOURCE_PATH}/carla/opendrive/*.cpp
     ${LIBCARLA_SOURCE_PATH}/carla/opendrive/parser/*.cpp

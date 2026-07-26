@@ -30,17 +30,10 @@ bool AShaderBasedSensor::AddPostProcessingMaterial(const FString &Path)
   return Loader.Succeeded();
 }
 
-bool AShaderBasedSensor::ReplacePostProcessingMaterial(
-    uint8_t ShaderIndex,
-    const FString &Path)
+void AShaderBasedSensor::ClearPostProcessingMaterials()
 {
-  UMaterial *Material = LoadObject<UMaterial>(nullptr, *Path);
-  if (Material == nullptr || !MaterialsFound.IsValidIndex(ShaderIndex))
-  {
-    return false;
-  }
-  MaterialsFound[ShaderIndex] = Material;
-  return true;
+  MaterialsFound.Reset();
+  FloatShaderParams.Reset();
 }
 
 void AShaderBasedSensor::SetUpSceneCaptureComponent(USceneCaptureComponent2D &SceneCapture)

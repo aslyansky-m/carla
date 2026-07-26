@@ -11,6 +11,10 @@
 
 #include <util/ue-header-guard-begin.h>
 #include "Actor/ActorBlueprintFunctionLibrary.h"
+#include "Engine/TextureRenderTarget2D.h"
+#include "Kismet/KismetRenderingLibrary.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "RenderingThread.h"
 #include <util/ue-header-guard-end.h>
 
@@ -27,78 +31,137 @@ ASceneCaptureCamera::ASceneCaptureCamera(const FObjectInitializer& ObjectInitial
 {
     AddPostProcessingMaterial(
         TEXT("Material'/Carla/PostProcessingMaterials/PhysicLensDistortion.PhysicLensDistortion'"));
+    FThetaOutputRenderTarget =
+        CreateDefaultSubobject<UTextureRenderTarget2D>(
+            TEXT("FThetaOutputRenderTarget"));
+    FThetaOutputRenderTarget->CompressionSettings =
+        TextureCompressionSettings::TC_Default;
+    FThetaOutputRenderTarget->SRGB = false;
+    FThetaOutputRenderTarget->bAutoGenerateMips = false;
+    FThetaOutputRenderTarget->bGPUSharedFlag = true;
+    FThetaOutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
+    FThetaOutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
 }
 
 void ASceneCaptureCamera::Set(const FActorDescription &Description)
 {
   Super::Set(Description);
-  const bool bEnableFTheta =
+  bFThetaEnabled =
       UActorBlueprintFunctionLibrary::RetrieveActorAttributeToBool(
           "ftheta_enabled", Description.Variations, false);
-  if (!bEnableFTheta)
+  if (!bFThetaEnabled)
   {
-    return;
-  }
-  if (!ReplacePostProcessingMaterial(
-          0u,
-          TEXT("Material'/Carla/PostProcessingMaterials/NvidiaFThetaDistortion.NvidiaFThetaDistortion'")))
-  {
-    UE_LOG(LogCarla, Error, TEXT(
-        "NVIDIA F-theta material is missing; ftheta_enabled cannot be used"));
     return;
   }
 
-  constexpr uint8 FThetaShaderIndex = 0u;
-  SetFloatShaderParameter(
-      FThetaShaderIndex,
-      TEXT("FThetaEnabled"),
-      1.0f);
-  SetFloatShaderParameter(
-      FThetaShaderIndex,
-      TEXT("FThetaImageWidth"),
+  // Do not compound CARLA's generic lens pass with the calibrated projection.
+  // Normal scene post-processing remains active on the rectilinear source.
+  ClearPostProcessingMaterials();
+  // Avoid quantizing the image to 8-bit before nonlinear resampling. The
+  // dedicated output target performs the only float-to-8-bit conversion.
+  Enable16BitFormat(true);
+
+  // image_size_x/y keep their normal public meaning: dimensions delivered to
+  // clients. The extra source dimensions are private implementation detail.
+  FThetaOutputWidth = Super::GetImageWidth();
+  FThetaOutputHeight = Super::GetImageHeight();
+  const uint32 FThetaSourceWidth = FMath::Max(
+      1,
+      FMath::RoundToInt(
+          UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+              "ftheta_source_width", Description.Variations, 800.0f)));
+  const uint32 FThetaSourceHeight = FMath::Max(
+      1,
+      FMath::RoundToInt(
+          UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
+              "ftheta_source_height", Description.Variations, 600.0f)));
+  SetImageSize(FThetaSourceWidth, FThetaSourceHeight);
+  FThetaPrincipalPointX =
       UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
-          "ftheta_image_width", Description.Variations, 800.0f));
-  SetFloatShaderParameter(
-      FThetaShaderIndex,
-      TEXT("FThetaImageHeight"),
+          "ftheta_principal_point_x", Description.Variations, 400.0f);
+  FThetaPrincipalPointY =
       UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
-          "ftheta_image_height", Description.Variations, 600.0f));
-  SetFloatShaderParameter(
-      FThetaShaderIndex,
-      TEXT("FThetaPrincipalPointX"),
+          "ftheta_principal_point_y", Description.Variations, 300.0f);
+  FThetaMaxAngle =
       UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
-          "ftheta_principal_point_x", Description.Variations, 400.0f));
-  SetFloatShaderParameter(
-      FThetaShaderIndex,
-      TEXT("FThetaPrincipalPointY"),
+          "ftheta_max_angle", Description.Variations, 1.5707963268f);
+  FThetaSourceFocalLength =
       UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
-          "ftheta_principal_point_y", Description.Variations, 300.0f));
-  SetFloatShaderParameter(
-      FThetaShaderIndex,
-      TEXT("FThetaMaxAngle"),
-      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
-          "ftheta_max_angle", Description.Variations, 1.5707963268f));
-  SetFloatShaderParameter(
-      FThetaShaderIndex,
-      TEXT("FThetaSourceFocalLength"),
-      UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
-          "ftheta_source_focal_length", Description.Variations, 400.0f));
+          "ftheta_source_focal_length", Description.Variations, 400.0f);
   for (uint8 Index = 0u; Index < 6u; ++Index)
   {
     const FString AttributeName = FString::Printf(
         TEXT("ftheta_pixeldist_to_angle_%u"), Index);
-    const FName ParameterName(*FString::Printf(TEXT("FThetaBackward%u"), Index));
-    SetFloatShaderParameter(
-        FThetaShaderIndex,
-        ParameterName,
+    FThetaBackward[Index] =
         UActorBlueprintFunctionLibrary::RetrieveActorAttributeToFloat(
-            *AttributeName, Description.Variations, 0.0f));
+            *AttributeName, Description.Variations, 0.0f);
   }
 }
 
 void ASceneCaptureCamera::BeginPlay()
 {
+  if (bFThetaEnabled)
+  {
+    // The warp has strongly varying minification. Generate source mips and let
+    // the material sampler choose a trilinearly filtered level per pixel.
+    CaptureRenderTarget->bAutoGenerateMips = true;
+    CaptureRenderTarget->Filter = TextureFilter::TF_Trilinear;
+    CaptureRenderTarget->MipsSamplerFilter = TextureFilter::TF_Trilinear;
+  }
   Super::BeginPlay();
+
+  if (!bFThetaEnabled)
+  {
+    return;
+  }
+
+  check(FThetaOutputRenderTarget != nullptr);
+  FThetaOutputRenderTarget->InitCustomFormat(
+      FThetaOutputWidth,
+      FThetaOutputHeight,
+      PF_B8G8R8A8,
+      false);
+  FThetaOutputRenderTarget->TargetGamma = GetTargetGamma();
+
+  UMaterial *Material = LoadObject<UMaterial>(
+      nullptr,
+      TEXT("/Carla/PostProcessingMaterials/"
+           "NvidiaFThetaDistortion.NvidiaFThetaDistortion"));
+  if (Material == nullptr)
+  {
+    UE_LOG(
+        LogCarla,
+        Fatal,
+        TEXT("NVIDIA F-theta material is missing; run "
+             "generate_nvidia_ftheta_material.py before packaging CARLA"));
+    return;
+  }
+  FThetaMaterial = UMaterialInstanceDynamic::Create(Material, this);
+  check(FThetaMaterial != nullptr);
+  FThetaMaterial->SetTextureParameterValue(
+      TEXT("FThetaSourceTexture"), CaptureRenderTarget);
+  FThetaMaterial->SetScalarParameterValue(
+      TEXT("FThetaOutputWidth"), FThetaOutputWidth);
+  FThetaMaterial->SetScalarParameterValue(
+      TEXT("FThetaOutputHeight"), FThetaOutputHeight);
+  FThetaMaterial->SetScalarParameterValue(
+      TEXT("FThetaSourceWidth"), Super::GetImageWidth());
+  FThetaMaterial->SetScalarParameterValue(
+      TEXT("FThetaSourceHeight"), Super::GetImageHeight());
+  FThetaMaterial->SetScalarParameterValue(
+      TEXT("FThetaPrincipalPointX"), FThetaPrincipalPointX);
+  FThetaMaterial->SetScalarParameterValue(
+      TEXT("FThetaPrincipalPointY"), FThetaPrincipalPointY);
+  FThetaMaterial->SetScalarParameterValue(
+      TEXT("FThetaMaxAngle"), FThetaMaxAngle);
+  FThetaMaterial->SetScalarParameterValue(
+      TEXT("FThetaSourceFocalLength"), FThetaSourceFocalLength);
+  for (uint8 Index = 0u; Index < 6u; ++Index)
+  {
+    FThetaMaterial->SetScalarParameterValue(
+        FName(*FString::Printf(TEXT("FThetaBackward%u"), Index)),
+        FThetaBackward[Index]);
+  }
 }
 
 void ASceneCaptureCamera::OnFirstClientConnected()
@@ -137,7 +200,16 @@ void ASceneCaptureCamera::PostPhysTick(UWorld *World, ELevelTick TickType, float
       return;
 
   auto FrameIndex = FCarlaEngine::GetFrameCounter();
-  ImageUtil::ReadSensorImageDataAsyncFColor(*this, [this, FrameIndex](
+  if (bFThetaEnabled)
+  {
+    check(FThetaOutputRenderTarget != nullptr);
+    check(FThetaMaterial != nullptr);
+    UKismetRenderingLibrary::DrawMaterialToRenderTarget(
+        this, FThetaOutputRenderTarget, FThetaMaterial);
+  }
+  UTextureRenderTarget2D *ReadbackTarget =
+      bFThetaEnabled ? FThetaOutputRenderTarget : GetCaptureRenderTarget();
+  ImageUtil::ReadImageDataAsyncFColor(*ReadbackTarget, [this, FrameIndex](
     TArrayView<const FColor> Pixels,
     FIntPoint Size) -> bool
   {

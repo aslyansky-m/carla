@@ -1,4 +1,4 @@
-"""Generate CARLA's NVIDIA F-theta post-process material.
+"""Generate CARLA's NVIDIA F-theta GPU resampling material.
 
 Run with UnrealEditor-Cmd after enabling the Python Editor Script Plugin:
 
@@ -14,9 +14,10 @@ ASSET_PATH = "/Game/Carla/PostProcessingMaterials"
 ASSET_NAME = "NvidiaFThetaDistortion"
 
 PARAMETERS = {
-    "FThetaEnabled": 0.0,
-    "FThetaImageWidth": 800.0,
-    "FThetaImageHeight": 600.0,
+    "FThetaOutputWidth": 800.0,
+    "FThetaOutputHeight": 600.0,
+    "FThetaSourceWidth": 800.0,
+    "FThetaSourceHeight": 600.0,
     "FThetaPrincipalPointX": 400.0,
     "FThetaPrincipalPointY": 300.0,
     "FThetaMaxAngle": 1.5707963268,
@@ -30,16 +31,12 @@ PARAMETERS = {
 }
 
 CUSTOM_CODE = r"""
-if (FThetaEnabled < 0.5)
-{
-    return UV;
-}
-
 // NVIDIA/OpenCV camera axes: +X right, +Y down, +Z forward. Calibration
 // coordinates use integer pixel centres while Unreal UVs address texel
 // centres at (pixel + 0.5) / image_size.
-float2 image_size = float2(FThetaImageWidth, FThetaImageHeight);
-float2 output_pixel = UV * image_size - 0.5;
+float2 output_size = float2(FThetaOutputWidth, FThetaOutputHeight);
+float2 source_size = float2(FThetaSourceWidth, FThetaSourceHeight);
+float2 output_pixel = UV * output_size - 0.5;
 float2 delta = output_pixel -
     float2(FThetaPrincipalPointX, FThetaPrincipalPointY);
 float radius = length(delta);
@@ -57,10 +54,10 @@ float sin_theta;
 float cos_theta;
 sincos(theta, sin_theta, cos_theta);
 float2 source_pixel =
-    image_size * 0.5 +
+    (source_size - 1.0) * 0.5 +
     FThetaSourceFocalLength * radial_direction * sin_theta /
         max(cos_theta, 1.0e-7);
-return (source_pixel + 0.5) / image_size;
+return (source_pixel + 0.5) / source_size;
 """
 
 
@@ -76,14 +73,10 @@ def create_material():
         unreal.Material,
         unreal.MaterialFactoryNew(),
     )
+    material.set_editor_property("material_domain", unreal.MaterialDomain.MD_SURFACE)
     material.set_editor_property(
-        "material_domain", unreal.MaterialDomain.MD_POST_PROCESS
+        "shading_model", unreal.MaterialShadingModel.MSM_UNLIT
     )
-    material.set_editor_property(
-        "blendable_location",
-        unreal.BlendableLocation.BL_BEFORE_TONEMAPPING,
-    )
-    material.set_editor_property("blendable_priority", 100)
 
     uv = unreal.MaterialEditingLibrary.create_material_expression(
         material, unreal.MaterialExpressionTextureCoordinate, -1000, -500
@@ -96,10 +89,11 @@ def create_material():
     custom.set_editor_property(
         "output_type", unreal.CustomMaterialOutputType.CMOT_FLOAT2
     )
-    custom_inputs = [unreal.CustomInput(input_name="UV")]
-    custom_inputs.extend(
-        unreal.CustomInput(input_name=name) for name in PARAMETERS
-    )
+    custom_inputs = []
+    for name in ("UV", *PARAMETERS):
+        custom_input = unreal.CustomInput()
+        custom_input.set_editor_property("input_name", name)
+        custom_inputs.append(custom_input)
     custom.set_editor_property("inputs", custom_inputs)
     unreal.MaterialEditingLibrary.connect_material_expressions(
         uv, "", custom, "UV"
@@ -119,21 +113,21 @@ def create_material():
         ):
             raise RuntimeError(f"Failed to connect material parameter {name}")
 
-    scene = unreal.MaterialEditingLibrary.create_material_expression(
-        material, unreal.MaterialExpressionSceneTexture, 0, -300
+    source = unreal.MaterialEditingLibrary.create_material_expression(
+        material, unreal.MaterialExpressionTextureSampleParameter2D, 0, -300
     )
-    scene.set_editor_property(
-        "scene_texture_id",
-        unreal.SceneTextureId.PPI_POST_PROCESS_INPUT0,
+    source.set_editor_property("parameter_name", "FThetaSourceTexture")
+    source.set_editor_property(
+        "sampler_type", unreal.MaterialSamplerType.SAMPLERTYPE_COLOR
     )
     if not unreal.MaterialEditingLibrary.connect_material_expressions(
-        custom, "", scene, "Coordinates"
+        custom, "", source, ""
     ):
-        raise RuntimeError("Failed to connect F-theta UVs to scene texture")
+        raise RuntimeError("Failed to connect F-theta UVs to source texture")
     if not unreal.MaterialEditingLibrary.connect_material_property(
-        scene, "Color", unreal.MaterialProperty.MP_EMISSIVE_COLOR
+        source, "RGB", unreal.MaterialProperty.MP_EMISSIVE_COLOR
     ):
-        raise RuntimeError("Failed to connect scene texture to material output")
+        raise RuntimeError("Failed to connect source texture to material output")
 
     unreal.MaterialEditingLibrary.layout_material_expressions(material)
     unreal.MaterialEditingLibrary.recompile_material(material)

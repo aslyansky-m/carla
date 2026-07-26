@@ -396,10 +396,10 @@ void UActorBlueprintFunctionLibrary::MakeCameraDefinition(
     Variation.bRestrictToRecommended = false;
     return Variation;
   };
-  const auto FThetaImageWidth =
-      MakeFThetaFloat(TEXT("ftheta_image_width"), TEXT("800.0"));
-  const auto FThetaImageHeight =
-      MakeFThetaFloat(TEXT("ftheta_image_height"), TEXT("600.0"));
+  const auto FThetaSourceWidth =
+      MakeFThetaFloat(TEXT("ftheta_source_width"), TEXT("800.0"));
+  const auto FThetaSourceHeight =
+      MakeFThetaFloat(TEXT("ftheta_source_height"), TEXT("600.0"));
   const auto FThetaPrincipalPointX =
       MakeFThetaFloat(TEXT("ftheta_principal_point_x"), TEXT("400.0"));
   const auto FThetaPrincipalPointY =
@@ -432,8 +432,8 @@ void UActorBlueprintFunctionLibrary::MakeCameraDefinition(
       LensXSize,
       LensYSize,
       FThetaEnabled,
-      FThetaImageWidth,
-      FThetaImageHeight,
+      FThetaSourceWidth,
+      FThetaSourceHeight,
       FThetaPrincipalPointX,
       FThetaPrincipalPointY,
       FThetaMaxAngle,

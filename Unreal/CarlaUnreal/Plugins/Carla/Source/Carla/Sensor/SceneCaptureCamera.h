@@ -15,6 +15,8 @@
 
 #include "SceneCaptureCamera.generated.h"
 
+class UMaterialInstanceDynamic;
+
 /// A sensor that captures images from the scene.
 UCLASS()
 class CARLA_API ASceneCaptureCamera : public AShaderBasedSensor
@@ -30,6 +32,17 @@ public:
 
   void Set(const FActorDescription &ActorDescription) override;
 
+  /// Serialize the final warped size, not the larger source render size.
+  uint32 GetImageWidth() const
+  {
+    return bFThetaEnabled ? FThetaOutputWidth : Super::GetImageWidth();
+  }
+
+  uint32 GetImageHeight() const
+  {
+    return bFThetaEnabled ? FThetaOutputHeight : Super::GetImageHeight();
+  }
+
 protected:
 	
 #ifdef CARLA_HAS_GBUFFER_API
@@ -43,4 +56,20 @@ protected:
   virtual void OnFirstClientConnected() override;
   virtual void OnLastClientDisconnected() override;
 
+private:
+
+  bool bFThetaEnabled = false;
+  uint32 FThetaOutputWidth = 800u;
+  uint32 FThetaOutputHeight = 600u;
+  float FThetaPrincipalPointX = 400.0f;
+  float FThetaPrincipalPointY = 300.0f;
+  float FThetaMaxAngle = 1.5707963268f;
+  float FThetaSourceFocalLength = 400.0f;
+  float FThetaBackward[6] = {};
+
+  UPROPERTY()
+  UTextureRenderTarget2D *FThetaOutputRenderTarget = nullptr;
+
+  UPROPERTY()
+  UMaterialInstanceDynamic *FThetaMaterial = nullptr;
 };
