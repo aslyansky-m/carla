@@ -16,6 +16,7 @@
 #include "SceneCaptureCamera.generated.h"
 
 class UMaterialInstanceDynamic;
+class UMaterial;
 
 /// A sensor that captures images from the scene.
 UCLASS()
@@ -69,6 +70,11 @@ private:
 
   UPROPERTY()
   UTextureRenderTarget2D *FThetaOutputRenderTarget = nullptr;
+
+  // A serialized hard reference ensures the optional generated material is
+  // discovered by the cooker instead of relying on a runtime-only string.
+  UPROPERTY()
+  UMaterial *FThetaBaseMaterial = nullptr;
 
   UPROPERTY()
   UMaterialInstanceDynamic *FThetaMaterial = nullptr;

@@ -16,6 +16,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "RenderingThread.h"
+#include "UObject/ConstructorHelpers.h"
 #include <util/ue-header-guard-end.h>
 
 FActorDefinition ASceneCaptureCamera::GetSensorDefinition()
@@ -41,6 +42,11 @@ ASceneCaptureCamera::ASceneCaptureCamera(const FObjectInitializer& ObjectInitial
     FThetaOutputRenderTarget->bGPUSharedFlag = true;
     FThetaOutputRenderTarget->AddressX = TextureAddress::TA_Clamp;
     FThetaOutputRenderTarget->AddressY = TextureAddress::TA_Clamp;
+
+    static ConstructorHelpers::FObjectFinder<UMaterial> FThetaMaterialFinder(
+        TEXT("/Game/Carla/PostProcessingMaterials/"
+             "NvidiaFThetaDistortion.NvidiaFThetaDistortion"));
+    FThetaBaseMaterial = FThetaMaterialFinder.Object;
 }
 
 void ASceneCaptureCamera::Set(const FActorDescription &Description)
@@ -123,11 +129,7 @@ void ASceneCaptureCamera::BeginPlay()
       false);
   FThetaOutputRenderTarget->TargetGamma = GetTargetGamma();
 
-  UMaterial *Material = LoadObject<UMaterial>(
-      nullptr,
-      TEXT("/Carla/PostProcessingMaterials/"
-           "NvidiaFThetaDistortion.NvidiaFThetaDistortion"));
-  if (Material == nullptr)
+  if (FThetaBaseMaterial == nullptr)
   {
     UE_LOG(
         LogCarla,
@@ -136,7 +138,7 @@ void ASceneCaptureCamera::BeginPlay()
              "generate_nvidia_ftheta_material.py before packaging CARLA"));
     return;
   }
-  FThetaMaterial = UMaterialInstanceDynamic::Create(Material, this);
+  FThetaMaterial = UMaterialInstanceDynamic::Create(FThetaBaseMaterial, this);
   check(FThetaMaterial != nullptr);
   FThetaMaterial->SetTextureParameterValue(
       TEXT("FThetaSourceTexture"), CaptureRenderTarget);
