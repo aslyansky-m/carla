@@ -33,7 +33,6 @@
 #include "DynamicRHI.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "UObject/UObjectGlobals.h"
 #include <util/ue-header-guard-end.h>
 
 namespace cr = carla::road;
@@ -144,24 +143,10 @@ void ACarlaGameModeBase::InitGame(
   else if (WeatherClass != nullptr) {
     Episode->Weather = World->SpawnActor<AWeather>(WeatherClass);
   } else {
-    // Some UE5 maps leave WeatherClass unset even though the standard CARLA
-    // weather Blueprint is cooked. Load it only after map initialization:
-    // loading this asset from the game-mode CDO constructor is unsafe with
-    // UE5's async loader and can crash during initial GC verification.
-    UClass* DefaultWeatherClass = StaticLoadClass(
-        AWeather::StaticClass(),
-        nullptr,
-        TEXT("/Game/Carla/Blueprints/Weather/"
-             "BP_CarlaWeather.BP_CarlaWeather_C"));
-    if (DefaultWeatherClass != nullptr)
-    {
-      Episode->Weather = World->SpawnActor<AWeather>(DefaultWeatherClass);
-      UE_LOG(LogCarla, Log, TEXT("Spawned default CARLA weather actor."));
-    }
-    else
-    {
-      UE_LOG(LogCarla, Error, TEXT("Missing weather class!"));
-    }
+    UE_LOG(
+        LogCarla,
+        Warning,
+        TEXT("Missing weather class; retaining the map's fixed lighting."));
   }
 
   GameInstance->NotifyInitGame();
