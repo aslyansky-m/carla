@@ -382,7 +382,10 @@ void UCarlaSettingsDelegate::LaunchEpicQualityCommands(UWorld *world) const
 
   GEngine->Exec(world, TEXT("r.AmbientOcclusionLevels -1"));
   GEngine->Exec(world, TEXT("r.RHICmdBypass 1"));
-  GEngine->Exec(world, TEXT("r.DefaultFeature.AntiAliasing 1"));
+  // UE5's native TSR gives the scene-capture cameras temporal stability
+  // without brute-force supersampling the expensive Lumen/Nanite scene.
+  GEngine->Exec(world, TEXT("r.DefaultFeature.AntiAliasing 4"));
+  GEngine->Exec(world, TEXT("sg.AntiAliasingQuality 3"));
   GEngine->Exec(world, TEXT("r.Streaming.PoolSize 2000"));
   GEngine->Exec(world, TEXT("r.MinScreenRadiusForLights 0.03"));
   GEngine->Exec(world, TEXT("r.SeparateTranslucency 1"));

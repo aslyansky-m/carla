@@ -36,6 +36,10 @@ public class Carla :
     base(Target)
   {
     PrivatePCHHeaderFile = "Carla.h";
+    // CARLA's large unity translation units make an otherwise small source edit
+    // take minutes to compile. Keep the engine's unity setting, but compile this
+    // frequently edited plugin per source file for fast incremental rebuilds.
+    bUseUnity = false;
     bEnableExceptions = true;
     bUseRTTI = true;
     
