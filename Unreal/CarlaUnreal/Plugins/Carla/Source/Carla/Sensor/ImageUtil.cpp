@@ -225,6 +225,12 @@ namespace ImageUtil
     Self.Size = Texture->GetSizeXY();
     Self.Format = Texture->GetFormat();
     auto ResolveRect = FResolveRect();
+    // FRHIGPUTextureReadback assumes its source is already in CopySrc access.
+    // DrawMaterialToRenderTarget leaves the native F-theta output in
+    // SRVGraphics/SHADER_READ_ONLY_OPTIMAL on Vulkan, which previously
+    // triggered a validation ensure and a costly stack dump on every frame.
+    CmdList.Transition(FRHITransitionInfo(
+      Texture, ERHIAccess::Unknown, ERHIAccess::CopySrc));
     Self.Readback->EnqueueCopy(CmdList, Texture, ResolveRect);
 
     auto Query = RenderQueryPool->AllocateQuery();
