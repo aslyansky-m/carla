@@ -33,7 +33,8 @@ namespace traffic_manager {
     CachedSimpleWaypoint() = default;
     CachedSimpleWaypoint(const SimpleWaypointPtr& simple_waypoint);
 
-    void Read(const std::vector<uint8_t>& content, unsigned long& start);
+    // Returns false for a truncated or malformed record.
+    bool Read(const std::vector<uint8_t>& content, unsigned long& start);
 
     void Read(std::ifstream &in_file);
     void Write(std::ofstream &out_file);
@@ -48,9 +49,13 @@ namespace traffic_manager {
       in_file.read(reinterpret_cast<char *>(&out_obj), sizeof(T));
     }
     template <typename T>
-    void ReadValue(const std::vector<uint8_t>& content, unsigned long& start, T &out_obj) {
-      memcpy(&out_obj, &content[start], sizeof(T));
+    bool ReadValue(const std::vector<uint8_t>& content, unsigned long& start, T &out_obj) {
+      if (start > content.size() || sizeof(T) > content.size() - start) {
+        return false;
+      }
+      memcpy(&out_obj, content.data() + start, sizeof(T));
       start += sizeof(T);
+      return true;
     }
   };
 

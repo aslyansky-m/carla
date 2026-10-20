@@ -118,45 +118,52 @@ namespace traffic_manager {
     ReadValue<uint8_t>(in_file, this->road_option);
   }
 
-  void CachedSimpleWaypoint::Read(const std::vector<uint8_t>& content, unsigned long& start) {
-    ReadValue<uint64_t>(content, start, this->waypoint_id);
+  bool CachedSimpleWaypoint::Read(const std::vector<uint8_t>& content, unsigned long& start) {
+    next_waypoints.clear();
+    previous_waypoints.clear();
+    if (!ReadValue<uint64_t>(content, start, this->waypoint_id) ||
+        !ReadValue<uint32_t>(content, start, this->road_id) ||
+        !ReadValue<uint32_t>(content, start, this->section_id) ||
+        !ReadValue<int32_t>(content, start, this->lane_id) ||
+        !ReadValue<float>(content, start, this->s)) {
+      return false;
+    }
 
-    // road_id, section_id, lane_id, s
-    ReadValue<uint32_t>(content, start, this->road_id);
-    ReadValue<uint32_t>(content, start, this->section_id);
-    ReadValue<int32_t>(content, start, this->lane_id);
-    ReadValue<float>(content, start, this->s);
-
-    // list_of_next
     uint16_t total_next;
-    ReadValue<uint16_t>(content, start, total_next);
+    if (!ReadValue<uint16_t>(content, start, total_next) ||
+        total_next > (content.size() - start) / sizeof(uint64_t)) {
+      return false;
+    }
     for (uint16_t i = 0; i < total_next; i++) {
       uint64_t id;
-      ReadValue<uint64_t>(content, start, id);
+      if (!ReadValue<uint64_t>(content, start, id)) { return false; }
       this->next_waypoints.push_back(id);
     }
 
-    // list_of_previous
     uint16_t total_previous;
-    ReadValue<uint16_t>(content, start, total_previous);
+    if (!ReadValue<uint16_t>(content, start, total_previous) ||
+        total_previous > (content.size() - start) / sizeof(uint64_t)) {
+      return false;
+    }
     for (uint16_t i = 0; i < total_previous; i++) {
       uint64_t id;
-      ReadValue<uint64_t>(content, start, id);
+      if (!ReadValue<uint64_t>(content, start, id)) { return false; }
       this->previous_waypoints.push_back(id);
     }
 
-    // left, right
-    ReadValue<uint64_t>(content, start, this->next_left_waypoint);
-    ReadValue<uint64_t>(content, start, this->next_right_waypoint);
-
-    // geo_grid_id
-    ReadValue<int32_t>(content, start, this->geodesic_grid_id);
-
-    // is_junction
-    ReadValue<bool>(content, start, this->is_junction);
-
-    // road_option
-    ReadValue<uint8_t>(content, start, this->road_option);
+    // Decode the serialized bool as a byte first: arbitrary bool bit patterns
+    // have undefined behavior in C++.
+    uint8_t junction;
+    if (!ReadValue<uint64_t>(content, start, this->next_left_waypoint) ||
+        !ReadValue<uint64_t>(content, start, this->next_right_waypoint) ||
+        !ReadValue<int32_t>(content, start, this->geodesic_grid_id) ||
+        !ReadValue<uint8_t>(content, start, junction) || junction > 1 ||
+        !ReadValue<uint8_t>(content, start, this->road_option) ||
+        road_option > static_cast<uint8_t>(RoadOption::RoadEnd)) {
+      return false;
+    }
+    is_junction = junction != 0;
+    return true;
   }
 
 } // namespace traffic_manager

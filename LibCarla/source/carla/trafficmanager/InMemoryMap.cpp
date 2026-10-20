@@ -8,6 +8,7 @@
 
 #include "carla/trafficmanager/Constants.h"
 #include "carla/trafficmanager/InMemoryMap.h"
+#include <cmath>
 
 namespace carla {
 namespace traffic_manager {
@@ -112,51 +113,82 @@ namespace traffic_manager {
     unsigned long pos = 0;
     std::vector<CachedSimpleWaypoint> cached_waypoints;
     std::unordered_map<uint64_t, uint32_t> id2index;
+    NodeList loaded_topology;
 
     // read total records
     uint32_t total;
-    memcpy(&total, &content[pos], sizeof(total));
+    if (content.size() < sizeof(total)) { return false; }
+    memcpy(&total, content.data(), sizeof(total));
     pos += sizeof(total);
+    // The on-disk format has 50 fixed bytes per record, plus link IDs.
+    // Bound counts before allocating or decoding any records.
+    if (total == 0 || total > (content.size() - pos) / 50u) { return false; }
+    cached_waypoints.reserve(total);
+    loaded_topology.reserve(total);
 
     // read simple waypoints
     for (uint32_t i=0; i < total; i++) {
       CachedSimpleWaypoint cached_wp;
-      cached_wp.Read(content, pos);
+      if (!cached_wp.Read(content, pos) || !std::isfinite(cached_wp.s) ||
+          !id2index.emplace(cached_wp.waypoint_id, i).second) {
+        return false;
+      }
       cached_waypoints.push_back(cached_wp);
-      id2index.insert({cached_wp.waypoint_id, i});
 
       WaypointPtr waypoint_ptr = _world_map->GetWaypointXODR(cached_wp.road_id, cached_wp.lane_id, cached_wp.s);
+      if (waypoint_ptr == nullptr || waypoint_ptr->GetSectionId() != cached_wp.section_id) {
+        log_warning("InMemoryMap cache does not match the active OpenDRIVE map");
+        return false;
+      }
       SimpleWaypointPtr wp = std::make_shared<SimpleWaypoint>(waypoint_ptr);
       wp->SetGeodesicGridId(cached_wp.geodesic_grid_id);
       wp->SetIsJunction(cached_wp.is_junction);
       wp->SetRoadOption(static_cast<RoadOption>(cached_wp.road_option));
-      dense_topology.push_back(wp);
+      loaded_topology.push_back(wp);
+    }
+    if (pos != content.size()) { return false; }
+
+    // Validate the entire graph before installing links. Failure leaves the
+    // map untouched, so the caller can rebuild it safely.
+    for (const auto &cached_wp : cached_waypoints) {
+      for (const auto id : cached_wp.next_waypoints) {
+        if (id2index.count(id) == 0) { return false; }
+      }
+      for (const auto id : cached_wp.previous_waypoints) {
+        if (id2index.count(id) == 0) { return false; }
+      }
+      if ((cached_wp.next_left_waypoint && !id2index.count(cached_wp.next_left_waypoint)) ||
+          (cached_wp.next_right_waypoint && !id2index.count(cached_wp.next_right_waypoint))) {
+        return false;
+      }
     }
 
     // connect waypoints
-    for (uint32_t i=0; i < dense_topology.size(); i++) {
-      auto wp = dense_topology.at(i);
+    for (uint32_t i=0; i < loaded_topology.size(); i++) {
+      auto wp = loaded_topology.at(i);
       auto cached_wp = cached_waypoints.at(i);
 
       std::vector<SimpleWaypointPtr> next_waypoints;
       for (auto id : cached_wp.next_waypoints) {
-        next_waypoints.push_back(dense_topology.at(id2index.at(id)));
+        next_waypoints.push_back(loaded_topology.at(id2index.at(id)));
       }
       std::vector<SimpleWaypointPtr> previous_waypoints;
       for (auto id : cached_wp.previous_waypoints) {
-        previous_waypoints.push_back(dense_topology.at(id2index.at(id)));
+        previous_waypoints.push_back(loaded_topology.at(id2index.at(id)));
       }
       wp->SetNextWaypoint(next_waypoints);
       wp->SetPreviousWaypoint(previous_waypoints);
       if (cached_wp.next_left_waypoint > 0) {
-        wp->SetLeftWaypoint(dense_topology.at(id2index.at(cached_wp.next_left_waypoint)));
+        wp->SetLeftWaypoint(loaded_topology.at(id2index.at(cached_wp.next_left_waypoint)));
       }
       if (cached_wp.next_right_waypoint > 0) {
-        wp->SetRightWaypoint(dense_topology.at(id2index.at(cached_wp.next_right_waypoint)));
+        wp->SetRightWaypoint(loaded_topology.at(id2index.at(cached_wp.next_right_waypoint)));
       }
     }
 
     // create spatial tree
+    dense_topology = std::move(loaded_topology);
+    rtree.clear();
     SetUpSpatialTree();
 
     return true;

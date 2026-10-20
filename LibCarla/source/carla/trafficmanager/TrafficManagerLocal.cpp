@@ -121,7 +121,10 @@ void TrafficManagerLocal::SetupLocalMap() {
   if (!files.empty()) {
     auto content = episode_proxy.Lock()->GetCacheFile(files[0], true);
     if (content.size() != 0) {
-      local_map->Load(content);
+      if (!local_map->Load(content)) {
+        log_warning("Invalid or stale InMemoryMap cache. Rebuilding from the active OpenDRIVE map.");
+        local_map->SetUp();
+      }
     } else {
       log_warning("No InMemoryMap cache found. Setting up local map. This may take a while...");
       local_map->SetUp();
