@@ -1,0 +1,221 @@
+{
+  "date_utc": "2026-10-20",
+  "scope": "Targeted follow-up fixes; not full-map or production-pipeline qualification",
+  "binary_sha256": "e8592c3a8b8c25677c8b14a8c7bc0a61e49f2237f6fccd186bf80cede9c8a80c",
+  "client_module_sha256": "7d6f24ea776d641c197d4cb6050f96c8060ac17a0fd831cde314dc9cf4e1fb7e",
+  "client_wheel_sha256": "fca3c06452bebb0b4c115344060b5eebf8d640e558402be9d916883cd8409514",
+  "native_cache_recovery": {
+    "slurm_job": 318325,
+    "cases": [
+      {
+        "case": "valid",
+        "passed": true,
+        "map": "Carla/Maps/Town03_Opt",
+        "cache_sha256": "a43352aafc92eab0b8fcc575c989ed2b7db8554e5054ad74690fabd990266b55",
+        "cache_bytes": 335274,
+        "setup_seconds": 0.24542851885780692,
+        "distance_m": 170.25570678710938,
+        "ticks": 160,
+        "opendrive_sha256": "abf177bcd9b66cfefb7ac4919f6456815f1384f4229f1343c8a6a90bbb7713c9",
+        "rebuilt_from_active_map": false
+      },
+      {
+        "case": "stale",
+        "passed": true,
+        "map": "Carla/Maps/Town03_Opt",
+        "cache_sha256": "f221da6f5b4a6ca765ba9866f590780e21349862bdb0e1b06f4d48f05948ae07",
+        "cache_bytes": 587422,
+        "setup_seconds": 0.2437872220762074,
+        "distance_m": 170.25570678710938,
+        "ticks": 160,
+        "opendrive_sha256": "abf177bcd9b66cfefb7ac4919f6456815f1384f4229f1343c8a6a90bbb7713c9",
+        "rebuilt_from_active_map": true
+      },
+      {
+        "case": "truncated",
+        "passed": true,
+        "map": "Carla/Maps/Town03_Opt",
+        "cache_sha256": "1361f72922c64bef6c3e236726f1903042f3a4253e555222c54f1be2bb6442a7",
+        "cache_bytes": 335273,
+        "setup_seconds": 0.23928560386411846,
+        "distance_m": 170.25570678710938,
+        "ticks": 160,
+        "opendrive_sha256": "abf177bcd9b66cfefb7ac4919f6456815f1384f4229f1343c8a6a90bbb7713c9",
+        "rebuilt_from_active_map": true
+      },
+      {
+        "case": "oversized-count",
+        "passed": true,
+        "map": "Carla/Maps/Town03_Opt",
+        "cache_sha256": "9951699a28109f35120c3ae529f43cbd3deb2b3605332d8d6ceb53fa3deb4134",
+        "cache_bytes": 335274,
+        "setup_seconds": 0.24372011004015803,
+        "distance_m": 170.25570678710938,
+        "ticks": 160,
+        "opendrive_sha256": "abf177bcd9b66cfefb7ac4919f6456815f1384f4229f1343c8a6a90bbb7713c9",
+        "rebuilt_from_active_map": true
+      },
+      {
+        "case": "missing-waypoint",
+        "passed": true,
+        "map": "Carla/Maps/Town03_Opt",
+        "cache_sha256": "6a59ed9ce6f5c44ff91c01e04fc779bd49006e750ff581e3315dfcf8e2c3ac53",
+        "cache_bytes": 335274,
+        "setup_seconds": 0.24905290408059955,
+        "distance_m": 170.25570678710938,
+        "ticks": 160,
+        "opendrive_sha256": "abf177bcd9b66cfefb7ac4919f6456815f1384f4229f1343c8a6a90bbb7713c9",
+        "rebuilt_from_active_map": true
+      },
+      {
+        "case": "dangling-link",
+        "passed": true,
+        "map": "Carla/Maps/Town03_Opt",
+        "cache_sha256": "34d32b528616cbb0761f29e9300676c0f26af69a1eec848953dcfff55f70e060",
+        "cache_bytes": 335274,
+        "setup_seconds": 0.2909325959626585,
+        "distance_m": 170.25570678710938,
+        "ticks": 160,
+        "opendrive_sha256": "abf177bcd9b66cfefb7ac4919f6456815f1384f4229f1343c8a6a90bbb7713c9",
+        "rebuilt_from_active_map": true
+      }
+    ]
+  },
+  "puddle_repair": {
+    "slurm_job": 318329,
+    "map": "Town03_Opt",
+    "pose": 0,
+    "wetness": 100,
+    "deposits": 100,
+    "dry_mean_absolute_rgb_difference": 0.17184714988425923,
+    "scale": 255,
+    "visual_result": "Vertical wall pooling removed; road puddles remain",
+    "cooked_assets": [
+      {
+        "path": "Content/Carla/Static/GenericMaterials/CheapMaterials/M_SideWalkCheap01.uexp",
+        "before_sha256": "07fb1e6e242ec976f585831eaf202ce260d25144bac212600c098a0cbe115884",
+        "after_sha256": "cf1937772417fa7512a97b014b3feae5c6d18353b8a43fb65697d598520ec00d"
+      },
+      {
+        "path": "Content/Carla/Static/GenericMaterials/CheapMaterials/M_SideWalkCheap01.uasset",
+        "before_sha256": "d3076ef228e0e90ebd1d8eb2d7d4eb1c0efa2df3793fcb860f8ba4ab46fd17f4",
+        "after_sha256": "ba54cde818e7ee516e00409cd75b62ad31b057f8344aebb3e298936862cea185"
+      }
+    ]
+  },
+  "night_repair": {
+    "slurm_job": 318319,
+    "daylight_mean_absolute_rgb_difference": 0.18753580729166666,
+    "scale": 255,
+    "night_vehicle_lights_before": 0,
+    "night_vehicle_lights_after": 3
+  },
+  "artifact_directory": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues",
+  "client_source_commit": "fe2c6fdf",
+  "sidewalk_repair": {
+    "slurm_job": 318340,
+    "map": "Town15/Town15",
+    "pose": 0,
+    "source_repair": {
+      "material": "/Game/Carla/Static/GenericMaterials/Sidewalk/MI_Sidewalk_Community_v2",
+      "before_sha256": "46026697151cb5bfc4e23519262ad312475f7f29b6188057521d1d76cf0d7869",
+      "after_sha256": "8515d98115f403329df2b6babddfc5d90d8f14233bfde871afc156c49c7e9edf",
+      "before_parameters": {
+        "RoughnessContrast": 25.0,
+        "RoughnessCorrection": -65.0
+      },
+      "after_parameters": {
+        "RoughnessContrast": 1.0,
+        "RoughnessCorrection": 0.0
+      },
+      "status": "source_repaired_requires_cook_and_render_validation"
+    },
+    "visual_result": "Dry tile texture retained without water-like reflections; maximum wetness/deposits still changes appearance",
+    "remaining_limit": "Extreme deposits still expose artifacts in other materials"
+  },
+  "final_cooked_assets": [
+    {
+      "path": "CarlaUnreal/Content/Carla/Static/GenericMaterials/CheapMaterials/M_SideWalkCheap01.uasset",
+      "before_sha256": "d3076ef228e0e90ebd1d8eb2d7d4eb1c0efa2df3793fcb860f8ba4ab46fd17f4",
+      "after_sha256": "ba54cde818e7ee516e00409cd75b62ad31b057f8344aebb3e298936862cea185"
+    },
+    {
+      "path": "CarlaUnreal/Content/Carla/Static/GenericMaterials/CheapMaterials/M_SideWalkCheap01.uexp",
+      "before_sha256": "07fb1e6e242ec976f585831eaf202ce260d25144bac212600c098a0cbe115884",
+      "after_sha256": "cf1937772417fa7512a97b014b3feae5c6d18353b8a43fb65697d598520ec00d"
+    },
+    {
+      "path": "CarlaUnreal/Content/Carla/Static/GenericMaterials/Sidewalk/MI_Sidewalk_Community_v2.uasset",
+      "before_sha256": "7213d013b4c3b790014e87819fa5792bd375868f7b9c36f2d2b1e3dde904070a",
+      "after_sha256": "4c84a5951ffc2c9802ab5fe9aae28876ad48f2e7b18dc824a026fbe075336331"
+    },
+    {
+      "path": "CarlaUnreal/Content/Carla/Static/GenericMaterials/Sidewalk/MI_Sidewalk_Community_v2.uexp",
+      "before_sha256": "0361ce348a2be28cc25969fc3393619e3ab9939071f13056a6770dcbd93884fa",
+      "after_sha256": "10cf39788b127f292a154b92a6074416a39269402650c393cf4e7d95f65ed12b"
+    }
+  ],
+  "gallery_path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/gallery.html",
+  "material_ab_checks": [
+    {
+      "study": "puddle-ab",
+      "condition": "dry",
+      "checks": "matching map, OpenDRIVE, camera settings/poses, requested/readback weather, dimensions",
+      "images": [
+        {
+          "path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/puddle-ab/before/dry/pose-0.png",
+          "sha256": "fd18233e435c5638614c1a4538a7532a8739c90335802a62b484b0ee628dd79b"
+        },
+        {
+          "path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/puddle-ab/after/dry/pose-0.png",
+          "sha256": "f5f1606a852b7c4c770182e9fc754051385e529e8913fe29ab90a25dbe8e8130"
+        }
+      ]
+    },
+    {
+      "study": "puddle-ab",
+      "condition": "puddles100",
+      "checks": "matching map, OpenDRIVE, camera settings/poses, requested/readback weather, dimensions",
+      "images": [
+        {
+          "path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/puddle-ab/before/puddles100/pose-0.png",
+          "sha256": "c60813deac71905865f93ffc9fe2e132a6a6cd3fc3b89d69e2df5da0eba2fbcd"
+        },
+        {
+          "path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/puddle-ab/after/puddles100/pose-0.png",
+          "sha256": "aec7dbdcd604edd119586ed2d7b51f1d82d597bb000bfa16f20bc46d1f69b7a0"
+        }
+      ]
+    },
+    {
+      "study": "sidewalk-ab",
+      "condition": "dry",
+      "checks": "matching map, OpenDRIVE, camera settings/poses, requested/readback weather, dimensions",
+      "images": [
+        {
+          "path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/sidewalk-ab/before/dry/pose-0.png",
+          "sha256": "6a435c93da9f26a50993d0074619185fa79489e5c7b3090d1209ee74894fb765"
+        },
+        {
+          "path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/sidewalk-ab/after/dry/pose-0.png",
+          "sha256": "175f34e27e82612509b50eabc054f8d4cb2c4dc2456e2452ff8adefdee3b31e2"
+        }
+      ]
+    },
+    {
+      "study": "sidewalk-ab",
+      "condition": "puddles100",
+      "checks": "matching map, OpenDRIVE, camera settings/poses, requested/readback weather, dimensions",
+      "images": [
+        {
+          "path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/sidewalk-ab/before/puddles100/pose-0.png",
+          "sha256": "458a9a68d3e7a56267c968ddc93edf1c1236186cfdb00ad30e43cb63d7935984"
+        },
+        {
+          "path": "/home/maksym.aslianskyi/dev/memory_data/remaining-issues/sidewalk-ab/after/puddles100/pose-0.png",
+          "sha256": "b90ad2d593cec0771f102b2de1f96d3dbdf9f05012028a5c99340ed35e9225cd"
+        }
+      ]
+    }
+  ]
+}

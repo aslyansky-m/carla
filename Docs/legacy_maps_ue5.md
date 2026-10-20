@@ -76,7 +76,7 @@ support rain, cloud, wetness, wind, or dust rendering.
 | --- | --- | --- |
 | Shaded detail | `-carla-experimental-sky-fill=2` | Retains directional shadows; not calibrated photometry. |
 | Legacy surface wetness | `-carla-wetness-bridge -carla-wetness-scale=100` | The inspected materials use percent units internally. Values derive from the current weather request, including repeated updates. |
-| Limit puddle pooling | `-carla-puddles-scale=0.25` | Mitigation only. A material slope mask and recook are still needed to prevent puddles on vertical surfaces. |
+| Limit puddle pooling | `-carla-puddles-scale=0.25` | Global mitigation. The targeted sidewalk slope repair below removes vertical pooling without reducing road deposits. |
 | Volumetric fog | `-carla-experimental-volumetric-fog` | Approximation; optional `-carla-volumetric-fog-distance=200` is in metres. |
 | Night illumination | `-carla-night-lighting -carla-night-street-scale=0.05 -carla-night-moon-lux=0.25 -carla-night-sky-intensity=0.08` | Fixed-altitude moon approximation; original street-light state/intensity is restored in daylight. |
 | Vehicle night lighting | `-carla-night-headlamp-fallback -carla-night-vehicle-lights` with night illumination | Paired 300-lumen spotlights; not automotive cutoff/IES calibration. |
@@ -109,8 +109,78 @@ traffic_manager = client.get_trafficmanager(8000)
 
 The validated replacement had 5,059 waypoints and zero invalid references.
 `prepare` selects a unique process-local cache, leaves shared/package caches
-untouched, and records input/output hashes. This is a workflow workaround;
-the native cache loader itself is not repaired here.
+untouched, and records input/output hashes. It remains useful with older clients.
+
+The native loader now bounds-checks binary records, validates waypoint and link
+references against the active map, and rebuilds on rejected caches. Rebuild and
+install the **Python client wheel** to use this fix; replacing the server binary
+alone does not update client-side Traffic Manager. Cache files do not include
+an OpenDRIVE digest, so valid references alone cannot prove network identity.
+
+`check_tm_cache_recovery.py` tests a valid cache, the stale packaged Town03 cache,
+a truncated record, oversized count, missing waypoint, and dangling link. Run
+one case per fresh owned server with the patched client, for example:
+
+```sh
+python PythonAPI/util/legacy_maps/check_tm_cache_recovery.py \
+  --port 2000 --tm-port 8000 --case truncated --output /path/to/new/tm-check
+```
+
+All six cases completed a 160-tick driving probe (170.26 m each); all five bad
+caches rebuilt from the current OpenDRIVE. This is cache recovery validation,
+not traffic-rule or full-route qualification.
+
+## Targeted puddle material repair
+
+`repair_puddle_slope.py` modifies the known migrated `M_SideWalkCheap01` graph.
+Run it using UnrealEditor-Cmd's Python commandlet against an isolated project
+copy, with `CARLA_MATERIAL_REPAIR_REPORT` set to a new JSON report path. Copy the
+material itself into that project; do not edit the shared asset through a
+symlink. Recook the material and stage it in a separate test package.
+
+The puddle mask is multiplied by
+`saturate((VertexNormalWS.z - 0.7) / 0.3)`. Geometric normals avoid a feedback
+loop through the material's Normal output. This suppresses pooling on vertical
+and downward surfaces while preserving upward-facing road deposits.
+
+The Town03 same-pose A/B removes the wall's mirror-like pooling at wetness and
+deposits 100. The dry capture mean absolute RGB difference is 0.172/255.
+This validates that material and view, not all migrated material permutations.
+The source repair script is included; cooked content is deployment data and
+is not distributed in this source repository.
+
+The companion `repair_sidewalk_roughness.py` targets
+`/Game/Carla/Static/GenericMaterials/Sidewalk/MI_Sidewalk_Community_v2`.
+Its migrated overrides compute `saturate(texture^25 - 65)`, forcing zero dry
+roughness. Restoring the parent defaults (contrast 1, correction 0) preserves
+the roughness texture and the existing wetness response. Both scripts fail on
+unexpected inputs and require a fresh report path.
+
+Example for a private project copy with the target asset copied locally:
+
+```sh
+export CARLA_MATERIAL_REPAIR_REPORT=/path/to/new/sidewalk-repair.json
+"$CARLA_UNREAL_ENGINE_PATH/Engine/Binaries/Linux/UnrealEditor-Cmd" \
+  /path/to/private/CarlaUnreal.uproject -run=pythonscript \
+  -script="$PWD/PythonAPI/util/legacy_maps/repair_sidewalk_roughness.py" \
+  -nullrhi -nosound -unattended -nop4
+
+"$CARLA_UNREAL_ENGINE_PATH/Engine/Binaries/Linux/UnrealEditor-Cmd" \
+  /path/to/private/CarlaUnreal.uproject -run=cook -targetplatform=Linux \
+  -cooksinglepackagenorefs \
+  -package=/Game/Carla/Static/GenericMaterials/Sidewalk/MI_Sidewalk_Community_v2 \
+  -unversioned \
+  -ini:Game:[/Script/UnrealEd.ProjectPackagingSettings]:bShareMaterialShaderCode=False \
+  -nullrhi -nosound -unattended -nop4
+```
+
+Stage both cooked `.uasset` and `.uexp` files at their original relative paths
+in a separate runtime. Save each asset's cooked pair before cooking the next:
+a non-iterative single-package cook can clear the previous output directory.
+Inline shader code avoids replacing the package's full
+shared shader library. For the puddle repair, substitute its script and
+`/Game/Carla/Static/GenericMaterials/CheapMaterials/M_SideWalkCheap01` package.
+Do not modify a runtime while servers are using it.
 
 ## Validation and known gaps
 
@@ -135,12 +205,16 @@ Observed limitations remain:
   floating-looking box props. Town06/07 also show misplaced-looking props.
 - Town07's first route stalled at a static obstruction. The selected route
   avoids it; the content defect was not repaired.
-- Town15 has glossy sidewalks under a dry weather request. The material cause
-  has not been established.
+- Town15 dry sidewalk gloss was traced to the migrated material instance
+  forcing roughness to zero (`saturate(texture^25 - 65)`). The isolated
+  instance repair restores the parent defaults. Same-pose dry/wet captures
+  confirm the dry gloss is removed and wetness response remains; see the
+  follow-up validation.
 - Deep shadows remain dark in some maps. Town11's sampled route is sparse and
   does not establish environmental asset completeness.
-- Maximum deposits pool on vertical walls. Dust, moon and headlamp behavior
-  retain the limitations above.
+- The targeted sidewalk material no longer pools on vertical walls in the
+  inspected Town03 view. Other materials need separate checks. Dust, moon and
+  headlamp behavior retain the limitations above.
 - Segmentation remains a separate, deferred engine experiment; no Unreal Engine
   source patch is included in this publication.
 
@@ -161,3 +235,6 @@ The publication checks also rebuild the game and inspect repeated wetness/puddle
 updates and clear-weather recovery in the rendered runtime.
 [Validation results](legacy_maps_validation.json) distinguish those checks from
 the earlier gallery recordings.
+
+[Follow-up validation](legacy_maps_followup_validation.json) records native
+cache recovery, night/daylight comparisons, and isolated material repairs.
