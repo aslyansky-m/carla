@@ -1,0 +1,158 @@
+{
+  "date": "2026-10-20",
+  "source_commit": "398b1db8138ec9dac48615382ad71842867aefab",
+  "engine": "CARLA UE5.5 fork",
+  "build": {
+    "target": "CarlaUnreal Linux Development",
+    "passed": true
+  },
+  "automation": {
+    "tests": {
+      "Carla.ActorAttributes.RGBColorIsOpaque": "Success",
+      "Carla.Lights.SceneLightCanTurnOff": "Success"
+    },
+    "process_exit_code": 1,
+    "exit_note": "Both named tests passed. TestExit invoked forced Unix RequestExit, which returns 1 in this engine; results were verified from individual automation completion records."
+  },
+  "rendered_publication_check": {
+    "passed": true,
+    "material_values": {
+      "Wetness": {
+        "repeated_updates": 3,
+        "value": 100,
+        "clear_updates": 8,
+        "clear_value": 0
+      },
+      "Puddles": {
+        "repeated_updates": 3,
+        "value": 0.25,
+        "clear_updates": 8,
+        "clear_value": 0
+      }
+    },
+    "captures": 6,
+    "wet-capture": [
+      {
+        "file": "pose-0.png",
+        "sha256": "745742dcd167909ebb36eb7a17e19b751227b179725f1da72ff315d0f1263e9c"
+      },
+      {
+        "file": "pose-1.png",
+        "sha256": "9f97239a4a7275834d95a8611e4816fe1845aab88e3bad78a6fc0413ddfd356e"
+      },
+      {
+        "file": "pose-2.png",
+        "sha256": "4b2e01c5e05618948fc160d7f9ca8a864c95068315f3ee04fead597c260bcd50"
+      }
+    ],
+    "clear-capture": [
+      {
+        "file": "pose-0.png",
+        "sha256": "682b1bd2588c46121a7347ae4eea2ad6a2bfbc3bf3d6e691d3224bec2cd882aa"
+      },
+      {
+        "file": "pose-1.png",
+        "sha256": "0a323adc871810619339ad737b4a8b06ae0207cfe1afa82c4a0f19d7d314ced6"
+      },
+      {
+        "file": "pose-2.png",
+        "sha256": "94e12c9f4c78c6c7e653badf82e6b7965313030295b807d041a2e1d663a0adb7"
+      }
+    ]
+  },
+  "runtime_sha256": "e8592c3a8b8c25677c8b14a8c7bc0a61e49f2237f6fccd186bf80cede9c8a80c",
+  "earlier_gallery": {
+    "scope": "Recorded before publication cleanup; selected scenic samples, not full-map qualification. Traffic lights/signs ignored.",
+    "maps": [
+      {
+        "map": "Mine_01",
+        "seconds": 60,
+        "distance_m": 481.51792000118195,
+        "collision_events": 0
+      },
+      {
+        "map": "Town01_Opt",
+        "seconds": 60,
+        "distance_m": 430.4389643811599,
+        "collision_events": 0
+      },
+      {
+        "map": "Town02_Opt",
+        "seconds": 60,
+        "distance_m": 427.04215455857644,
+        "collision_events": 0
+      },
+      {
+        "map": "Town03_Opt",
+        "seconds": 60,
+        "distance_m": 486.0013941395671,
+        "collision_events": 0
+      },
+      {
+        "map": "Town04_Opt",
+        "seconds": 60,
+        "distance_m": 486.7005076380332,
+        "collision_events": 0
+      },
+      {
+        "map": "Town05_Opt",
+        "seconds": 60,
+        "distance_m": 421.9528709076335,
+        "collision_events": 0
+      },
+      {
+        "map": "Town06_Opt",
+        "seconds": 60,
+        "distance_m": 475.9354083090714,
+        "collision_events": 0
+      },
+      {
+        "map": "Town07_Opt",
+        "seconds": 60,
+        "distance_m": 404.03172330978214,
+        "collision_events": 0
+      },
+      {
+        "map": "Town10HD_Opt",
+        "seconds": 60,
+        "distance_m": 440.4911900609445,
+        "collision_events": 0
+      },
+      {
+        "map": "Town11",
+        "seconds": 60,
+        "distance_m": 483.2945363247239,
+        "collision_events": 0
+      },
+      {
+        "map": "Town12",
+        "seconds": 60,
+        "distance_m": 486.77510023365204,
+        "collision_events": 0
+      },
+      {
+        "map": "Town13",
+        "seconds": 60,
+        "distance_m": 489.3778259834162,
+        "collision_events": 0
+      },
+      {
+        "map": "Town15",
+        "seconds": 60,
+        "distance_m": 442.03879714259205,
+        "collision_events": 0
+      }
+    ]
+  },
+  "matched_version_comparison": {
+    "map": "Town03_Opt",
+    "versions": [
+      "0.9.16",
+      "0.10.0 (local repaired build)"
+    ],
+    "views": 3,
+    "max_camera_pose_difference": 0,
+    "identical_opendrive": true,
+    "identical_shared_camera_attributes": true
+  }
+}

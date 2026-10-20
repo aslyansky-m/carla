@@ -1,0 +1,22 @@
+{
+  "gamma": 2.2,
+  "exposure_mode": "histogram",
+  "exposure_compensation": 0.0,
+  "highlight_contrast_scale": 1.0,
+  "shadow_constrast_scale": 1.0,
+  "temp": 6500.0,
+  "tint": 0.0,
+  "color_saturation": "255,255,255",
+  "color_contrast": "255,255,255",
+  "color_gamma": "255,255,255",
+  "highlights_gamma": "255,255,255",
+  "scene_color_tint": "255,255,255",
+  "chromatic_aberration_intensity": 0.0,
+  "lens_flare_intensity": 0.0,
+  "bloom_intensity": 0.0,
+  "vignette_intensity": 0.0,
+  "tone_curve_amount": 1.0,
+  "shutter_speed": 250.0,
+  "iso": 100.0,
+  "fstop": 8.0
+}
