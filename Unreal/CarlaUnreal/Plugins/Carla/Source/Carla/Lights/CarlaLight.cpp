@@ -77,7 +77,11 @@ FLinearColor UCarlaLight::GetLightColor() const
 
 void UCarlaLight::SetLightOn(bool bOn)
 {
-  flags |= ECarlaLightFlags::TurnedOn;
+  flags &= static_cast<ECarlaLightFlags>(~static_cast<uint8>(ECarlaLightFlags::TurnedOn));
+  if (bOn)
+  {
+    flags |= ECarlaLightFlags::TurnedOn;
+  }
   UpdateLights();
   RecordLightChange();
 }
@@ -117,7 +121,11 @@ void UCarlaLight::SetLightState(carla::rpc::LightState LightState)
   LightIntensity = LightState._intensity;
   LightColor = LightState._color;
   LightType = static_cast<ELightType>(LightState._group);
-  flags |= LightState._active ? ECarlaLightFlags::TurnedOn : ECarlaLightFlags();
+  flags &= static_cast<ECarlaLightFlags>(~static_cast<uint8>(ECarlaLightFlags::TurnedOn));
+  if (LightState._active)
+  {
+    flags |= ECarlaLightFlags::TurnedOn;
+  }
   UpdateLights();
   RecordLightChange();
 }

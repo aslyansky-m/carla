@@ -5,6 +5,9 @@
 // For a copy, see <https://opensource.org/licenses/MIT>.
 
 #include "Carla/Weather/Weather.h"
+#include "Carla/Weather/LegacyMapLighting.h"
+#include "Carla/Weather/NightLighting.h"
+#include "Carla/Weather/WeatherMaterialExperiment.h"
 #include "Carla.h"
 #include "Carla/Sensor/SceneCaptureCamera.h"
 
@@ -28,6 +31,11 @@ AWeather::AWeather(const FObjectInitializer& ObjectInitializer)
     RootComponent = ObjectInitializer.CreateDefaultSubobject<USceneComponent>(this, TEXT("RootComponent"));
 }
 
+ALegacyMapWeather::ALegacyMapWeather(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+{
+}
+
 void AWeather::CheckWeatherPostProcessEffects()
 {
     if (Weather.Precipitation > 0.0f)
@@ -45,14 +53,28 @@ void AWeather::CheckWeatherPostProcessEffects()
     for (AActor* SensorActor : SensorActors)
     {
         ASceneCaptureCamera* Sensor = Cast<ASceneCaptureCamera>(SensorActor);
+        // Clearing the active map does not remove materials already installed
+        // on a sensor. Replace only weather-owned entries, preserving lens and
+        // user blendables when rain/dust stop or their weights change.
+        FPostProcessSettings& Settings = Sensor->GetCaptureComponent2D()->PostProcessSettings;
+        Settings.RemoveBlendable(PrecipitationPostProcessMaterial);
+        Settings.RemoveBlendable(DustStormPostProcessMaterial);
         for (auto& ActiveBlendable : ActiveBlendables)
-            Sensor->GetCaptureComponent2D()->PostProcessSettings.AddBlendable(ActiveBlendable.Key, ActiveBlendable.Value);
+            Settings.AddBlendable(ActiveBlendable.Key, ActiveBlendable.Value);
     }
 }
 
 void AWeather::ApplyWeather(const FWeatherParameters& InWeather)
 {
     SetWeather(InWeather);
+    if (GetWorld() != nullptr && ApplyLegacyMapWeather(*GetWorld(), Weather))
+    {
+        // This opt-in rig has no compatible weather Blueprint or precipitation
+        // material path. Do not execute legacy Blueprint references to BP_Sky.
+        ApplyOptInNightLighting(*GetWorld(), Weather);
+        LogLegacyWeatherDiagnostics(*GetWorld(), Weather);
+        return;
+    }
     CheckWeatherPostProcessEffects();
 
 #ifdef CARLA_WEATHER_EXTRA_LOG
@@ -75,14 +97,34 @@ void AWeather::ApplyWeather(const FWeatherParameters& InWeather)
 
     // Call the blueprint that actually changes the weather.
     RefreshWeather(Weather);
+    if (GetWorld() != nullptr)
+    {
+        ApplyWeatherMaterialExperiment(*GetWorld(), Weather);
+        ApplyModernWeatherBridge(*GetWorld(), Weather);
+        ApplyOptInNightLighting(*GetWorld(), Weather);
+        LogLegacyWeatherDiagnostics(*GetWorld(), Weather);
+    }
 }
 
 void AWeather::NotifyWeather(ASensor* Sensor)
 {
+    if (GetWorld() != nullptr && ApplyLegacyMapWeather(*GetWorld(), Weather))
+    {
+        ApplyOptInNightLighting(*GetWorld(), Weather);
+        LogLegacyWeatherDiagnostics(*GetWorld(), Weather);
+        return;
+    }
     CheckWeatherPostProcessEffects();
 
     // Call the blueprint that actually changes the weather.
     RefreshWeather(Weather);
+    if (GetWorld() != nullptr)
+    {
+        ApplyWeatherMaterialExperiment(*GetWorld(), Weather);
+        ApplyModernWeatherBridge(*GetWorld(), Weather);
+        ApplyOptInNightLighting(*GetWorld(), Weather);
+        LogLegacyWeatherDiagnostics(*GetWorld(), Weather);
+    }
 }
 
 void AWeather::SetWeather(const FWeatherParameters& InWeather)

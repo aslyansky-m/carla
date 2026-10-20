@@ -13,6 +13,7 @@
 #include "Carla/Lights/CarlaLight.h"
 #include "Carla/Vehicle/VehicleSpawnPoint.h"
 #include "Carla/Util/BoundingBoxCalculator.h"
+#include "Carla/Weather/LegacyMapLighting.h"
 
 #include <util/disable-ue4-macros.h>
 #include "carla/opendrive/OpenDriveParser.h"
@@ -33,6 +34,7 @@
 #include "DynamicRHI.h"
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "UObject/UObjectGlobals.h"
 #include <util/ue-header-guard-end.h>
 
 namespace cr = carla::road;
@@ -134,19 +136,64 @@ void ACarlaGameModeBase::InitGame(
     UE_LOG(LogCarla, Error, TEXT("Missing CarlaSettingsDelegate!"));
   }
 
+  AWeather *ModernWeatherOverride = PrepareLegacyModernWeather(*World);
   AActor* WeatherActor =
       UGameplayStatics::GetActorOfClass(GetWorld(), AWeather::StaticClass());
-  if (WeatherActor != nullptr) {
+  if (ModernWeatherOverride != nullptr) {
+    Episode->Weather = ModernWeatherOverride;
+  }
+  else if (WeatherActor != nullptr) {
     UE_LOG(LogCarla, Log, TEXT("Existing weather actor. Doing nothing then!"));
     Episode->Weather = static_cast<AWeather*>(WeatherActor);
   }
   else if (WeatherClass != nullptr) {
     Episode->Weather = World->SpawnActor<AWeather>(WeatherClass);
   } else {
-    UE_LOG(
-        LogCarla,
-        Warning,
-        TEXT("Missing weather class; retaining the map's fixed lighting."));
+    // BP_CarlaWeather assumes the UE5 BP_Carla_Sky actor exists. Legacy
+    // layered towns use BP_Sky instead; spawning the new weather controller
+    // there dereferences missing Blueprint actors during sensor setup.
+    AActor *CarlaSkyActor = nullptr;
+    for (TActorIterator<AActor> It(World); It; ++It)
+    {
+      if (It->GetClass()->GetName() == TEXT("BP_Carla_Sky_C"))
+      {
+        CarlaSkyActor = *It;
+        break;
+      }
+    }
+    if (CarlaSkyActor == nullptr)
+    {
+      UE_LOG(
+          LogCarla,
+          Warning,
+          TEXT("Map has no BP_Carla_Sky actor; retaining its fixed lighting."));
+    }
+    else
+    {
+      // Loading here is safe because map initialization is complete; doing
+      // this in the game-mode CDO constructor is unsafe with UE5 async loading
+      // and initial GC verification.
+      UClass *DefaultWeatherClass = StaticLoadClass(
+          AWeather::StaticClass(),
+          nullptr,
+          TEXT("/Game/Carla/Blueprints/Weather/"
+               "BP_CarlaWeather.BP_CarlaWeather_C"));
+      if (DefaultWeatherClass != nullptr)
+      {
+        Episode->Weather = World->SpawnActor<AWeather>(DefaultWeatherClass);
+        UE_LOG(
+            LogCarla,
+            Log,
+            TEXT("Spawned default CARLA weather actor for BP_Carla_Sky."));
+      }
+      else
+      {
+        UE_LOG(
+            LogCarla,
+            Error,
+            TEXT("Missing default CARLA weather Blueprint."));
+      }
+    }
   }
 
   GameInstance->NotifyInitGame();
@@ -187,6 +234,7 @@ void ACarlaGameModeBase::BeginPlay()
   check(World != nullptr);
 
   LoadMapLayer(GameInstance->GetCurrentMapLayer());
+  FinalizeLegacyModernSky(*World);
   ReadyToRegisterObjects = true;
 
   ATagger::TagActorsInLevel(*World, true);
@@ -241,6 +289,18 @@ void ACarlaGameModeBase::BeginPlay()
     for(UCarlaLight* Light : Lights)
     {
       Light->RegisterLight();
+    }
+  }
+  ConfigureLegacyMapLighting(*World);
+  if (HasLegacyMapLighting(*World))
+  {
+    if (Episode->Weather == nullptr)
+    {
+      Episode->Weather = World->SpawnActor<ALegacyMapWeather>();
+    }
+    if (Episode->Weather != nullptr)
+    {
+      Episode->Weather->ApplyWeather(GetLegacyMapInitialWeather());
     }
   }
   EnableOverlapEvents();

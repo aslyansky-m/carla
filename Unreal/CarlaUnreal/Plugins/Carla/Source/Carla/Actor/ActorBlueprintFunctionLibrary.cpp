@@ -1591,11 +1591,11 @@ FColor UActorBlueprintFunctionLibrary::ActorAttributeToColor(
     }
     Colors.Add(Val);
   }
-  FColor Color;
-  Color.R = Colors[0u];
-  Color.G = Colors[1u];
-  Color.B = Colors[2u];
-  return Color;
+  // RGB attributes have no alpha channel. FColor's default constructor does
+  // not initialize it; camera grading converts alpha into the fourth (master)
+  // saturation/contrast/gamma component, so an indeterminate alpha can make
+  // otherwise identical cameras render black. RGB attributes are opaque.
+  return FColor(Colors[0u], Colors[1u], Colors[2u], 255u);
 }
 
 FVector UActorBlueprintFunctionLibrary::ActorAttributeToVector(

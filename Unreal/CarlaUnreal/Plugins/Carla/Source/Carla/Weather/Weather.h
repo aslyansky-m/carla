@@ -79,3 +79,14 @@ private:
   UPROPERTY(EditAnywhere, Category = "Weather")
   bool DayNightCycle = true;
 };
+
+/// Concrete controller for the optional native legacy-map lighting rig.
+/// AWeather itself is abstract and cannot be spawned without a Blueprint.
+UCLASS(NotBlueprintable)
+class CARLA_API ALegacyMapWeather : public AWeather
+{
+  GENERATED_BODY()
+
+public:
+  ALegacyMapWeather(const FObjectInitializer& ObjectInitializer);
+};

@@ -24,6 +24,8 @@
 #include "Landscape.h"
 #include "LandscapeHeightfieldCollisionComponent.h"
 #include "LandscapeComponent.h"
+#include "GameFramework/WorldSettings.h"
+#include "Physics/Experimental/PhysScene_Chaos.h"
 #include <util/ue-header-guard-end.h>
 
 #define LARGEMAP_LOGS 1
@@ -60,6 +62,15 @@ void ALargeMapManager::BeginPlay()
   RegisterTilesInWorldComposition();
 
   UWorld* World = GetWorld();
+  // Chaos cannot shift its physics scene with the old World Composition
+  // origin-rebasing path. Shifting only actors/rendering leaves collisions
+  // behind and repeatedly moves the hero to another tile. Keep UE5's large
+  // world coordinates, while retaining normal tile streaming.
+  if (!FPhysScene::SupportsOriginShifting())
+  {
+    World->GetWorldSettings()->bEnableWorldOriginRebasing = false;
+    UE_LOG(LogCarla, Log, TEXT("Large map: physics origin shifting unsupported; using fixed world origin."));
+  }
   /// Setup delegates
   // Origin rebase
   FCoreDelegates::PreWorldOriginOffset.AddUObject(this, &ALargeMapManager::PreWorldOriginOffset);
@@ -914,6 +925,10 @@ void ALargeMapManager::ConvertDormantToActiveActors()
 void ALargeMapManager::CheckIfRebaseIsNeeded()
 {
   TRACE_CPUPROFILER_EVENT_SCOPE(ALargeMapManager::CheckIfRebaseIsNeeded);
+  if (!FPhysScene::SupportsOriginShifting())
+  {
+    return;
+  }
   if(ActorsToConsider.Num() > 0)
   {
     UWorld* World = GetWorld();
